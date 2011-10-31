@@ -12,7 +12,7 @@ import java.awt.Image;
  */
 public class MainFrame {
   public static UIAccess createFrame(final int width, final int height) {
-    final JFrame frame = new JFrame("Clojureoids renderer");
+    final JFrame frame = new JFrame("- Clojureoids renderer -");
     frame.setSize(width, height);
     final JPanel imageContainer = new JPanel();
     frame.getContentPane().add(imageContainer);
