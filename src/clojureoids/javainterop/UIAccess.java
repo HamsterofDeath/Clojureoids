@@ -1,6 +1,6 @@
 package clojureoids.javainterop;
 
-import java.awt.Image;
+import java.awt.image.BufferedImage;
 
 /**
  * Developed with pleasure :)<br>
@@ -9,5 +9,7 @@ import java.awt.Image;
  * Time: 14:20<br>
  */
 public interface UIAccess {
-  void update(Image newImage);
+  void afterRenderingFinished();
+
+  BufferedImage provideCleanRenderTarget();
 }

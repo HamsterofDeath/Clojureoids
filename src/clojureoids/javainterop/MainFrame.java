@@ -2,7 +2,11 @@ package clojureoids.javainterop;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import java.awt.Image;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
 
 /**
  * Developed with pleasure :)<br>
@@ -12,15 +16,32 @@ import java.awt.Image;
  */
 public class MainFrame {
   public static UIAccess createFrame(final int width, final int height) {
+    final BufferedImage bufferedImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
     final JFrame frame = new JFrame("- Clojureoids renderer -");
-    frame.setSize(width, height);
-    final JPanel imageContainer = new JPanel();
-    frame.getContentPane().add(imageContainer);
+    frame.setPreferredSize(new Dimension(width, height));
+    final JPanel imageContainer = new JPanel() {
+      @Override
+      public void paint(final Graphics g) {
+        g.drawImage(bufferedImage, 0, 0, null);
+      }
+    };
+    imageContainer.setBackground(Color.DARK_GRAY);
+    frame.getContentPane().setLayout(new BorderLayout());
+    frame.getContentPane().add(imageContainer, BorderLayout.CENTER);
+    frame.pack();
     frame.setVisible(true);
     return new UIAccess() {
-      public void update(final Image newImage) {
-        imageContainer.getGraphics().drawImage(newImage, 0, 0, null);
+
+
+      public void afterRenderingFinished() {
         frame.repaint();
+      }
+
+      public BufferedImage provideCleanRenderTarget() {
+        final Graphics graphics = bufferedImage.getGraphics();
+        graphics.setColor(Color.black);
+        graphics.fillRect(0, 0, width, height);
+        return bufferedImage;
       }
     };
   }
