@@ -1,19 +1,14 @@
 (ns clojureoids.model
-  (:import java.lang.Math)
-  (:use clojureoids.random clojureoids.renderer))
+  (:import java.lang.Math clojureoids.space.xy)
+  (:use clojureoids.random clojureoids.renderer clojureoids.space))
 
-(def field-width 800)
-(def field-height 600)
 
 (defrecord polygon [edges])
 (defrecord stats [health position movement rotation-radians spin])
-(defrecord xy [x y])
 (defrecord movement [xy slowdown-factor])
 (defrecord game-element [stats gen-irender advance-function])
 (defrecord world [game-elements width height])
 
-(defn translated [position x y]
-  (new xy (+ (:x position) x) (+ (:y position) y)))
 
 (defn radians-to-x [radians] (Math/sin radians))
 

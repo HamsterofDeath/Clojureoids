@@ -1,6 +1,7 @@
 (ns clojureoids.factory
   (:use clojureoids.model
         clojureoids.logic
+        clojureoids.space
         clojureoids.renderer
         clojureoids.random)
   (:import clojureoids.model.world

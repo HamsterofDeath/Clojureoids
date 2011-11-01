@@ -1,5 +1,5 @@
 (ns clojureoids.main
-  (:use clojureoids.renderer clojureoids.logic clojureoids.factory clojureoids.model)
+  (:use clojureoids.renderer clojureoids.logic clojureoids.factory clojureoids.space)
   (:import [clojureoids.javainterop MainFrame AdvanceCallback]))
 
 (defn advance-world-and-render [world]
