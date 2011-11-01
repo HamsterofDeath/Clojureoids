@@ -1,16 +1,19 @@
 (ns clojureoids.model
   (:import java.lang.Math)
-  (:use clojureoids.random clojureoids.helpers clojureoids.renderer clojureoids.logic))
+  (:use clojureoids.random clojureoids.renderer))
 
-(def field-width 640)
-(def field-height 480)
+(def field-width 800)
+(def field-height 600)
 
 (defrecord polygon [edges])
-(defrecord game-element [stats irender advance-function])
-(defrecord stats [health position movement pointing-at spin])
+(defrecord stats [health position movement rotation-radians spin])
 (defrecord xy [x y])
 (defrecord movement [xy slowdown-factor])
+(defrecord game-element [stats gen-irender advance-function])
 (defrecord world [game-elements width height])
+
+(defn translated [position x y]
+  (new xy (+ (:x position) x) (+ (:y position) y)))
 
 (defn radians-to-x [radians] (Math/sin radians))
 
@@ -45,8 +48,14 @@
 
 (defn gen-random-normalized-vector [] (radians-to-position (gen-random-direction)))
 
+(defn initally-shift-position [position]
+  (translated position (* 0.5 field-width) (* 0.5 field-height)))
+
 (defn gen-asteroid-starting-position []
-  (multiplied (/ (min field-height field-width) 2.0) (gen-random-normalized-vector)))
+  (initally-shift-position
+    (multiplied
+      (/ (min field-height field-width) (+ 1.0 (random-double)) 2)
+      (gen-random-normalized-vector))))
 
 (defn gen-asteroid-movement [radius] (multiplied (initial-speed-by-radius radius) (gen-random-normalized-vector)))
 
@@ -56,17 +65,3 @@
   (new stats
     radius (gen-asteroid-starting-position)
     (gen-asteroid-movement radius) (gen-random-direction) (gen-random-spin radius)))
-
-(defn gen-asteroid [radius edges variance]
-  (let [stats (gen-asteroid-stats radius)]
-    (new game-element
-      stats
-      (polygon-renderer
-        (xy-to-polygon (gen-circle-outline radius edges variance))
-        #(:position stats))
-      advance-asteroid)))
-
-
-(defn gen-demo-world [asteroidcount]
-  (let [game-elements (repeatedly asteroidcount #(gen-asteroid (random-int-in-range 5 25) (random-int-in-range 9 25) 0.3))]
-    (new world game-elements field-width field-height)))
