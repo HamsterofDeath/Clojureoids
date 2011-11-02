@@ -1,18 +1,27 @@
-(ns clojureoids.space)
+(ns clojureoids.math)
 
 (def field-width 800)
 (def field-height 600)
 
 (defrecord xy [x y])
 
-(defn on-top-border? [position polygon]
+
+(defn on-top-border? [position area]
   true)
-(defn on-bottom-border? [position polygon]
+(defn on-bottom-border? [position area]
   true)
-(defn on-left-border? [position polygon]
+(defn on-left-border? [position area]
   true)
-(defn on-right-border? [position polygon]
+(defn on-right-border? [position area]
   true)
+
+(defn adjust-rotation [transform radians anchor]
+  (.rotate transform radians (:x anchor) (:y anchor))
+  transform)
+
+(defn adjust-position [transform xy]
+  (.translate transform (:x xy) (:y xy))
+  transform)
 
 (defn translated
   ([position xy]
@@ -41,8 +50,20 @@
         new-y (if (> tmp-y field-height) (- tmp-y field-height) tmp-y)]
     (if (and (= new-x old-x) (= new-y old-y)) position (new xy new-x new-y))))
 
-(defn apply-warp
-  [game-element]
-  (let [xy (get-in game-element [:stats :position ])]
-    (assoc-in game-element [:stats :position ] (apply-warp-to-position xy))))
+(defn apply-warp [game-element]
+  (update-in game-element [:stats :position ] #(apply-warp-to-position %)))
 
+(defn length-of [xy]
+  (let [x (:x xy)
+        y (:y xy)]
+    (Math/sqrt (+ (* x x) (* y y)))))
+
+(defn with-length [xy new-length]
+  (let [length (length-of xy)]
+    (new xy (* new-length (/ (:x xy) length)) (* new-length (/ (:y xy) length)))))
+
+(defn radians-to-x [radians] (- (Math/sin radians)))
+
+(defn radians-to-y [radians] (Math/cos radians))
+
+(defn radians-to-position [radians] (new xy (radians-to-x radians) (radians-to-y radians)))

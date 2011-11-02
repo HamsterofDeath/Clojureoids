@@ -1,25 +1,28 @@
 (ns clojureoids.renderer
-  (:import [java.awt Color Polygon Graphics2D])
-  (:use clojureoids.space))
+  (:import [java.awt.geom AffineTransform])
+  (:import [java.awt Color Graphics2D])
+  (:import [java.awt.geom Area])
+  (:use clojureoids.math))
 
-(defn adjust-rotation [graphics radians anchor]
-  (let [transform (.getTransform graphics)]
-    (.rotate transform radians (:x anchor) (:y anchor))
-    (.setTransform graphics transform)))
 
-(defn render-polygon [polygon image position-accessor rotation-accessor check-warp]
+(defn adjusted-transform [graphics xy radians])
+
+(defn render-area [area image position-accessor rotation-accessor check-warp]
   (let [graphics (.getGraphics image)
         xy (position-accessor)
-        rotation-radians (rotation-accessor)]
+        rotation-radians (rotation-accessor)
+        final-transform
+        (-> (.getTransform graphics)
+          (#(adjust-rotation % rotation-radians xy))
+          (#(adjust-position % xy)))]
     (.setColor graphics Color/white)
-    (adjust-rotation graphics rotation-radians xy)
-    (.translate graphics (int (:x xy)) (int (:y xy)))
-    (.draw graphics polygon)
+    (.setTransform graphics final-transform)
+    (.draw graphics area)
     (when check-warp
-      (when (on-left-border? xy polygon) (render-polygon polygon image #(warp-right xy) rotation-accessor false))
-      (when (on-right-border? xy polygon) (render-polygon polygon image #(warp-left xy) rotation-accessor false))
-      (when (on-top-border? xy polygon) (render-polygon polygon image #(warp-down xy) rotation-accessor false))
-      (when (on-bottom-border? xy polygon) (render-polygon polygon image #(warp-up xy) rotation-accessor false)))))
+      (when (on-left-border? xy area) (render-area area image #(warp-right xy) rotation-accessor false))
+      (when (on-right-border? xy area) (render-area area image #(warp-left xy) rotation-accessor false))
+      (when (on-top-border? xy area) (render-area area image #(warp-down xy) rotation-accessor false))
+      (when (on-bottom-border? xy area) (render-area area image #(warp-up xy) rotation-accessor false)))))
 
 (defprotocol IRender
   (render [this render-target]))
@@ -28,18 +31,26 @@
   (doseq [game-element (:game-elements world)]
     (render ((:gen-irender game-element) (:stats game-element)) target-image)))
 
-(defn polygon-renderer [polygon position-accessor rotation-accessor]
+(defn area-renderer [area position-accessor rotation-accessor]
   (reify IRender
     (render [this render-target]
-      (render-polygon polygon render-target position-accessor rotation-accessor true))))
+      (render-area area render-target position-accessor rotation-accessor true))))
 
-(defn default-renderer [polygon stats]
-  (polygon-renderer polygon #(:position stats) #(:rotation-radians stats)))
+(defn default-renderer [area stats]
+  (area-renderer area #(:position stats) #(:rotation-radians stats)))
 
-(defn gen-ship-polygon []
-  (let [polygon (new Polygon)]
+(defn gen-bullet-area []
+  (let [polygon (new java.awt.Polygon)]
+    (.addPoint polygon 0 0)
+    (.addPoint polygon 0 1)
+    (.addPoint polygon 1 1)
+    (.addPoint polygon 1 0)
+    (new Area polygon)))
+
+(defn gen-ship-area []
+  (let [polygon (new java.awt.Polygon)]
     (.addPoint polygon 0 8)
     (.addPoint polygon 6 -8)
     (.addPoint polygon 0 0)
     (.addPoint polygon -6 -8)
-    polygon))
+    (new Area polygon)))

@@ -1,34 +1,35 @@
 (ns clojureoids.model
-  (:import java.lang.Math clojureoids.space.xy)
-  (:use clojureoids.random clojureoids.renderer clojureoids.space))
-
+  (:import [java.awt.geom Area])
+  (:import java.lang.Math clojureoids.math.xy java.awt.geom.Area)
+  (:use clojureoids.random clojureoids.renderer clojureoids.math))
 
 (def ship-max-spin-speed 0.15)
 (def ship-spin-speed (/ Math/PI 270.0))
 (def ship-max-speed 8.0)
 (def ship-acceleration 0.15)
 (def ship-reverse-acceleration (/ ship-acceleration 2))
+(def bullet-life-time 45)
 
-(defrecord polygon [edges])
 (defrecord stats [health position movement rotation-radians spin])
 (defrecord movement [xy slowdown-factor])
-(defrecord game-element [stats gen-irender advance-function])
+(defrecord game-element [stats gen-irender advance-function iweapon])
 (defrecord world [game-elements width height])
+(defprotocol iweapon
+  (fire [this from-game-element])
+  (on-tick [this from-game-element]))
 
-(defn length-of [xy]
-  (let [x (:x xy)
-        y (:y xy)]
-    (Math/sqrt (+ (* x x) (* y y)))))
+(defn position-of [game-element]
+  (get-in game-element [:stats :position ]))
 
-(defn with-length [xy new-length]
-  (let [length (length-of xy)]
-    (new xy (* new-length (/ (:x xy) length)) (* new-length (/ (:y xy) length)))))
+(def no-weapon
+  (reify iweapon
+    (fire [this from-game-element]
+      [from-game-element])
+    (on-tick [this from-game-element]
+      from-game-element)))
 
-(defn radians-to-x [radians] (- (Math/sin radians)))
-
-(defn radians-to-y [radians] (Math/cos radians))
-
-(defn radians-to-position [radians] (new xy (radians-to-x radians) (radians-to-y radians)))
+(defn new-peaceful-game-element [stats gen-irender advance-function]
+  (new game-element stats gen-irender advance-function no-weapon))
 
 (defn direction-of [game-element]
   (radians-to-position (get-in game-element [:stats :rotation-radians ])))
@@ -40,7 +41,7 @@
 
 (defn gen-circle-outline [radius numPoints max-random-variance-percent]
   (let [radians-inc-per-step (/ (* 2 Math/PI) numPoints)
-        polygon-edges-at-radians (map #(* radians-inc-per-step %) (range 0 numPoints))
+        area-edges-at-radians (map #(* radians-inc-per-step %) (range 0 numPoints))
         radians-of-edges (map #(* radians-inc-per-step %) (range numPoints))
         random-variance-factor
         (fn [] (let [half-max-variance (/ max-random-variance-percent 2)
@@ -48,10 +49,10 @@
                  (+ 1 (- (* random-factor max-random-variance-percent) half-max-variance))))]
     (map #(multiplied (* radius (random-variance-factor)) (radians-to-position %)) radians-of-edges)))
 
-(defn xy-to-polygon [xys]
+(defn xy-to-area [xys]
   (let [polygon (new java.awt.Polygon)]
     (doall (for [point xys] [(.addPoint polygon (:x point) (:y point))]))
-    polygon))
+    (new Area polygon)))
 
 (defn initial-speed-by-radius [radius]
   (/ radius))
