@@ -3,18 +3,38 @@
   (:use clojureoids.random clojureoids.renderer clojureoids.space))
 
 
+(def ship-max-spin-speed 0.15)
+(def ship-spin-speed (/ Math/PI 270.0))
+(def ship-max-speed 8.0)
+(def ship-acceleration 0.15)
+(def ship-reverse-acceleration (/ ship-acceleration 2))
+
 (defrecord polygon [edges])
 (defrecord stats [health position movement rotation-radians spin])
 (defrecord movement [xy slowdown-factor])
 (defrecord game-element [stats gen-irender advance-function])
 (defrecord world [game-elements width height])
 
+(defn length-of [xy]
+  (let [x (:x xy)
+        y (:y xy)]
+    (Math/sqrt (+ (* x x) (* y y)))))
 
-(defn radians-to-x [radians] (Math/sin radians))
+(defn with-length [xy new-length]
+  (let [length (length-of xy)]
+    (new xy (* new-length (/ (:x xy) length)) (* new-length (/ (:y xy) length)))))
+
+(defn radians-to-x [radians] (- (Math/sin radians)))
 
 (defn radians-to-y [radians] (Math/cos radians))
 
 (defn radians-to-position [radians] (new xy (radians-to-x radians) (radians-to-y radians)))
+
+(defn direction-of [game-element]
+  (radians-to-position (get-in game-element [:stats :rotation-radians ])))
+
+(defn speed-of [game-element]
+  (length-of (get-in game-element [:stats :movement ])))
 
 (defn multiplied [factor position] (new xy (* factor (:x position)) (* factor (:y position))))
 
@@ -60,3 +80,7 @@
   (new stats
     radius (gen-asteroid-starting-position)
     (gen-asteroid-movement radius) (gen-random-direction) (gen-random-spin radius)))
+
+(defn gen-ship-stats []
+  (new stats
+    100 (initally-shift-position (new xy 0.0 0.0)) (new xy 0.0 0.0) 0.0 0.0))

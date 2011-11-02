@@ -1,5 +1,5 @@
 (ns clojureoids.renderer
-  (:import [java.awt Color])
+  (:import [java.awt Color Polygon Graphics2D])
   (:use clojureoids.space))
 
 (defn adjust-rotation [graphics radians anchor]
@@ -35,3 +35,11 @@
 
 (defn default-renderer [polygon stats]
   (polygon-renderer polygon #(:position stats) #(:rotation-radians stats)))
+
+(defn gen-ship-polygon []
+  (let [polygon (new Polygon)]
+    (.addPoint polygon 0 8)
+    (.addPoint polygon 6 -8)
+    (.addPoint polygon 0 0)
+    (.addPoint polygon -6 -8)
+    polygon))

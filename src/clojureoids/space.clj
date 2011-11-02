@@ -14,8 +14,11 @@
 (defn on-right-border? [position polygon]
   true)
 
-(defn translated [position x y]
-  (new xy (+ (:x position) x) (+ (:y position) y)))
+(defn translated
+  ([position xy]
+    (translated position (:x xy) (:y xy)))
+  ([position x y]
+    (new xy (+ (:x position) x) (+ (:y position) y))))
 
 (defn warp-left [position]
   (translated position (- field-width) 0))

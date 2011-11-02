@@ -8,4 +8,6 @@ package clojureoids.javainterop;
  */
 public interface UIAccess {
   void initAdvanceCallback(AdvanceCallback callback);
+
+  UserInput getMostRecentUserInput();
 }
