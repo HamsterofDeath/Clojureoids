@@ -13,11 +13,11 @@
               advanced-game-elements
               (flatten
                 (for [game-element old-game-elements]
-                  (let [coll-or-single ((:advance-function game-element) game-element)]
+                  (let [coll-or-single ((:advance-function game-element) game-element old-world)]
                     (if (coll? coll-or-single) coll-or-single [coll-or-single]))))]
           (swap! most-recent-world #(assoc % :game-elements advanced-game-elements)))))))
 
 (let [user-input-atom (atom [])
-      world (gen-demo-world 100 user-input-atom)
+      world (gen-demo-world 1 user-input-atom)
       uiaccess (MainFrame/createFrame field-width field-height)]
   (.initAdvanceCallback uiaccess (advance-world-and-render world user-input-atom uiaccess)))

@@ -1,4 +1,5 @@
-(ns clojureoids.math)
+(ns clojureoids.math
+  (:import [java.awt.geom AffineTransform]))
 
 (def field-width 800)
 (def field-height 600)
@@ -6,14 +7,19 @@
 (defrecord xy [x y])
 
 
-(defn on-top-border? [position area]
+(defn debug [anything]
+  (println anything)
+  anything)
+
+(defn on-top-border? [transformed-shape]
   true)
-(defn on-bottom-border? [position area]
+(defn on-bottom-border? [transformed-shape]
   true)
-(defn on-left-border? [position area]
+(defn on-left-border? [transformed-shape]
   true)
-(defn on-right-border? [position area]
+(defn on-right-border? [transformed-shape]
   true)
+
 
 (defn adjust-rotation [transform radians anchor]
   (.rotate transform radians (:x anchor) (:y anchor))
@@ -67,3 +73,24 @@
 (defn radians-to-y [radians] (Math/cos radians))
 
 (defn radians-to-position [radians] (new xy (radians-to-x radians) (radians-to-y radians)))
+
+(defn transform-with-new-translation [transform translation]
+  (let [clone (.clone transform)]
+    (.translate clone (:x translation) (:y translation))
+    clone))
+
+(defn center-of [rect]
+  (new xy (.getCenterX rect) (.getCenterY rect)))
+
+(defn difference-between [from to]
+  (new xy (- (:x to) (:x from)) (- (:y to) (:y from))))
+
+(defn approximate-distance [shape other-shape]
+  (let [center (center-of (.getBounds2D shape))
+        other-center (center-of (.getBounds2D other-shape))]
+    (length-of (difference-between center other-center))))
+
+(defn translate-to-origin [shape]
+  (let [translation-to-origin (difference-between (center-of (.getBounds2D shape)) (new xy 0 0))
+        transform (AffineTransform/getTranslateInstance (:x translation-to-origin) (:y translation-to-origin))]
+    (.createTransformedShape transform shape)))

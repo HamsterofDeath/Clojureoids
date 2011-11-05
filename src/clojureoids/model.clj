@@ -1,7 +1,7 @@
 (ns clojureoids.model
   (:import [java.awt.geom Area])
   (:import java.lang.Math clojureoids.math.xy java.awt.geom.Area)
-  (:use clojureoids.random clojureoids.renderer clojureoids.math))
+  (:use clojureoids.random clojureoids.renderer clojureoids.math clojureoids.dependencyfuckup))
 
 (def ship-max-spin-speed 0.15)
 (def ship-spin-speed (/ Math/PI 270.0))
@@ -10,16 +10,27 @@
 (def ship-reverse-acceleration (/ ship-acceleration 2))
 (def bullet-life-time 45)
 
-(defrecord stats [health position movement rotation-radians spin])
+(defrecord effects [affected-by-bullet damages-asteroid])
+(defrecord stats [power position movement rotation-radians spin effects])
 (defrecord movement [xy slowdown-factor])
-(defrecord game-element [stats gen-irender advance-function iweapon])
+(defrecord game-element [stats gen-irender advance-function gen-iweapon])
 (defrecord world [game-elements width height])
+
+(defn power-of [game-element]
+  (get-in game-element [:stats :power ]))
+
+(def ship-effect (new effects false false))
+(def bullet-effect (new effects false true))
+(def asteroid-effect (new effects true false))
+
 (defprotocol iweapon
   (fire [this from-game-element])
   (on-tick [this from-game-element]))
 
 (defn position-of [game-element]
   (get-in game-element [:stats :position ]))
+(defn rotation-of [game-element]
+  (get-in game-element [:stats :rotation-radians ]))
 
 (def no-weapon
   (reify iweapon
@@ -80,8 +91,21 @@
 (defn gen-asteroid-stats [radius]
   (new stats
     radius (gen-asteroid-starting-position)
-    (gen-asteroid-movement radius) (gen-random-direction) (gen-random-spin radius)))
+    (gen-asteroid-movement radius) (gen-random-direction) (gen-random-spin radius) asteroid-effect))
 
 (defn gen-ship-stats []
   (new stats
-    100 (initally-shift-position (new xy 0.0 0.0)) (new xy 0.0 0.0) 0.0 0.0))
+    100 (initally-shift-position (new xy 0.0 0.0)) (new xy 0.0 0.0) 0.0 0.0 ship-effect))
+
+(defn transformed-shape-of [game-element]
+  (get-shape (gen-renderer game-element)))
+
+(defn approximate-bounds-of [game-element]
+  (.getBounds2D (get-transformed-bounds (gen-renderer game-element))))
+
+(defn bounds-of-transformed-shape-of [game-element]
+  (.getBounds2D (transformed-shape-of game-element)))
+
+(defn default-transform-of [game-element]
+  (get-transform (gen-renderer game-element)))
+
