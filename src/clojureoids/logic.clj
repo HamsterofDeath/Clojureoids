@@ -59,16 +59,32 @@
         locate-broken-off-part-transform
         (AffineTransform/getTranslateInstance (:x from-asteroid-center-to-bullet) (:y from-asteroid-center-to-bullet))
         original-shape-of-asteroid (.clone (raw-shape-of asteroid))
-        transformed-broken-off-shape (.createTransformedShape locate-broken-off-part-transform broken-off)
+        transformed-broken-off-shape (.createTransformedArea broken-off locate-broken-off-part-transform)
         rotated-original-asteroid-shape
         (let [transform (AffineTransform/getRotateInstance (rotation-of asteroid))]
-          (.createTransformedArea original-shape-of-asteroid transform))]
+          (.createTransformedArea original-shape-of-asteroid transform))
+        rotated-original-asteroid-shape-clone (.clone rotated-original-asteroid-shape)
+        reverse-locate-broken-off-part-transform (.createInverse locate-broken-off-part-transform)]
     (.subtract rotated-original-asteroid-shape (new Area transformed-broken-off-shape))
+    (.intersect transformed-broken-off-shape rotated-original-asteroid-shape-clone)
     (let [reverse-rotation (AffineTransform/getRotateInstance (- (rotation-of asteroid)))
-          final-remaining-asteroid-part (.createTransformedArea rotated-original-asteroid-shape reverse-rotation)]
+          final-remaining-asteroid-part (.createTransformedArea rotated-original-asteroid-shape reverse-rotation)
+          final-broken-off-asteroid-part (.createTransformedArea transformed-broken-off-shape reverse-locate-broken-off-part-transform)]
       [(update-in
          asteroid [:gen-irender ]
-         #(fn [stats] (new-renderer (% stats) final-remaining-asteroid-part stats)))])))
+         #(fn [stats] (new-renderer (% stats) final-remaining-asteroid-part stats)))
+       (let [broken-off-asteroid-stats
+             (-> (:stats asteroid)
+               (update-in [:spin ] #(* 4.0 %))
+               (update-in [:movement ] #(with-length from-asteroid-center-to-bullet (* 7 (length-of %))))
+               (assoc :rotation-radians 0)
+               (assoc :position (position-of bullet))
+               (assoc :power (:power (:stats bullet))))
+             broken-off-asteroid
+             (-> asteroid
+               (assoc :stats broken-off-asteroid-stats)
+               (update-in [:gen-irender ] #(fn [stats] (new-renderer (% stats) final-broken-off-asteroid-part stats))))]
+         broken-off-asteroid)])))
 
 (defn split-up-asteroids [asteroids bullet]
   (flatten (map #(split-up-asteroid % bullet) asteroids)))
