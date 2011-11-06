@@ -82,6 +82,9 @@
 (defn center-of [rect]
   (new xy (.getCenterX rect) (.getCenterY rect)))
 
+(defn center-of-shape [shape]
+  (center-of (.getBounds2D shape)))
+
 (defn difference-between [from to]
   (new xy (- (:x to) (:x from)) (- (:y to) (:y from))))
 

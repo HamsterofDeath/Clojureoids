@@ -18,6 +18,6 @@
           (swap! most-recent-world #(assoc % :game-elements advanced-game-elements)))))))
 
 (let [user-input-atom (atom [])
-      world (gen-demo-world 1 user-input-atom)
+      world (gen-demo-world 10 user-input-atom)
       uiaccess (MainFrame/createFrame field-width field-height)]
   (.initAdvanceCallback uiaccess (advance-world-and-render world user-input-atom uiaccess)))

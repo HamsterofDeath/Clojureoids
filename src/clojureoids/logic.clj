@@ -1,6 +1,6 @@
 (ns clojureoids.logic
-  (:import clojureoids.javainterop.AdvanceCallback clojureoids.javainterop.UserInput clojureoids.math.xy java.awt.geom.Rectangle2D
-           java.awt.geom.AffineTransform)
+  (:import clojureoids.javainterop.AdvanceCallback clojureoids.javainterop.UserInput clojureoids.math.xy java.awt.geom.Rectangle2D java.awt.geom.Area
+           java.awt.geom.AffineTransform clojureoids.javainterop.TransformUtils [java.awt.geom AffineTransform])
   (:use clojureoids.model clojureoids.math clojureoids.random clojureoids.dependencyfuckup))
 
 (defn all-relevant-transforms-for-collision-check [game-element]
@@ -50,14 +50,25 @@
   (assoc-in game-element [:stats :rotation-radians ] 0.0))
 
 (defn split-up-asteroid [asteroid bullet]
-  (let [broken-off (gen-circle-outline (power-of bullet) (random-int-in-range 5 15) 0.35)
+  (let [transformed-bullet-bounds (bounds-of-transformed-shape-of bullet)
+        broken-off (xy-to-area (gen-circle-outline (power-of bullet) (random-int-in-range 5 15) 0.35))
         warped-asteroid-areas (warped-shapes-of asteroid)
-        shapes-by-distance (sort-by #(approximate-distance % (bounds-of-transformed-shape-of bullet)) warped-asteroid-areas)
-        nearest-shape (first shapes-by-distance)]
-    [(with-resettet-rotation
-       (update-in
+        shapes-by-distance (sort-by #(approximate-distance % transformed-bullet-bounds) warped-asteroid-areas)
+        nearest-shape (first shapes-by-distance)
+        from-asteroid-center-to-bullet (difference-between (center-of-shape nearest-shape) (position-of bullet))
+        locate-broken-off-part-transform
+        (AffineTransform/getTranslateInstance (:x from-asteroid-center-to-bullet) (:y from-asteroid-center-to-bullet))
+        original-shape-of-asteroid (.clone (raw-shape-of asteroid))
+        transformed-broken-off-shape (.createTransformedShape locate-broken-off-part-transform broken-off)
+        rotated-original-asteroid-shape
+        (let [transform (AffineTransform/getRotateInstance (rotation-of asteroid))]
+          (.createTransformedArea original-shape-of-asteroid transform))]
+    (.subtract rotated-original-asteroid-shape (new Area transformed-broken-off-shape))
+    (let [reverse-rotation (AffineTransform/getRotateInstance (- (rotation-of asteroid)))
+          final-remaining-asteroid-part (.createTransformedArea rotated-original-asteroid-shape reverse-rotation)]
+      [(update-in
          asteroid [:gen-irender ]
-         #(fn [stats] (new-renderer (% stats) (translate-to-origin nearest-shape) stats))))]))
+         #(fn [stats] (new-renderer (% stats) final-remaining-asteroid-part stats)))])))
 
 (defn split-up-asteroids [asteroids bullet]
   (flatten (map #(split-up-asteroid % bullet) asteroids)))
@@ -103,8 +114,7 @@
       (-> asteroid
         advance-rotation
         advance-movement
-        apply-warp)))
-  )
+        apply-warp))))
 
 (defn advance-bullet
   ([bullet remaining-ticks world]

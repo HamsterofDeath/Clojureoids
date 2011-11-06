@@ -10,9 +10,9 @@
   ((get game-element :gen-irender ) (:stats game-element)))
 
 (defn get-transform-of
-  ([area position-accessor rotation-accessor]
-    (get-transform-of (new AffineTransform) area position-accessor rotation-accessor))
-  ([base-transform area position-accessor rotation-accessor]
+  ([position-accessor rotation-accessor]
+    (get-transform-of (new AffineTransform) position-accessor rotation-accessor))
+  ([base-transform position-accessor rotation-accessor]
     (let [transform base-transform
           xy (position-accessor)
           rotation-radians (rotation-accessor)
@@ -26,7 +26,7 @@
   (let [graphics (.getGraphics image)
         xy (position-accessor)
         rotation-radians (rotation-accessor)
-        final-transform (get-transform-of (.getTransform graphics) area position-accessor rotation-accessor)]
+        final-transform (get-transform-of (.getTransform graphics) position-accessor rotation-accessor)]
     (.setColor graphics Color/white)
     (.setTransform graphics final-transform)
     (.draw graphics area)
@@ -49,7 +49,7 @@
     (render [this render-target]
       (render-area area render-target position-accessor rotation-accessor true))
     (get-shape [this]
-      (let [transform (get-transform-of area position-accessor rotation-accessor)]
+      (let [transform (get-transform-of position-accessor rotation-accessor)]
         (if
           (instance? java.awt.geom.Area area)
           (.createTransformedArea area transform)
@@ -58,7 +58,11 @@
       (let [transform (get-transform-of area position-accessor rotation-accessor)]
         (.createTransformedShape transform (.getBounds2D area))))
     (get-transform [this]
-      (get-transform-of area position-accessor rotation-accessor))
+      (get-transform-of position-accessor rotation-accessor))
+    (get-reverse-transform [this]
+      (.createInverse (get-transform-of position-accessor rotation-accessor)))
+    (get-raw-shape [this]
+      area)
     (new-renderer [this shape stats]
       (area-renderer shape #(:position stats) #(:rotation-radians stats)))))
 

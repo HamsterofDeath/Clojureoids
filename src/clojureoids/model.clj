@@ -109,3 +109,9 @@
 (defn default-transform-of [game-element]
   (get-transform (gen-renderer game-element)))
 
+(defn reverse-transform-of [game-element]
+  (get-reverse-transform (gen-renderer game-element)))
+
+(defn raw-shape-of [game-element]
+  (get-raw-shape (gen-renderer game-element)))
+
