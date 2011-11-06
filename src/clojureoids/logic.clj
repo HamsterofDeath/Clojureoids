@@ -131,9 +131,8 @@
   ([bullet world]
     (advance-bullet bullet bullet-life-time world)))
 
-(defn advance-ship [old-ship user-input-atom world]
-  (let [user-input @user-input-atom
-        apply-max-spin
+(defn advance-ship [old-ship user-input world]
+  (let [apply-max-spin
         (fn [ship]
           (let [current-spin (get-in ship [:stats :spin ])]
             (if

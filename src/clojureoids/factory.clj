@@ -42,7 +42,7 @@
     (new game-element
       (gen-ship-stats)
       #(default-renderer area %)
-      #(advance-ship %1 user-input-atom %2)
+      #(advance-ship %1 @user-input-atom %2)
       (gen-bullet-cannon))))
 
 
