@@ -51,7 +51,7 @@
 
 (defn split-up-asteroid [asteroid bullet]
   (let [transformed-bullet-bounds (bounds-of-transformed-shape-of bullet)
-        broken-off (xy-to-area (gen-circle-outline (power-of bullet) (random-int-in-range 5 15) 0.35))
+        broken-off (xy-to-area (gen-circle-outline (power-of bullet) (random-int-in-range 5 15) 1.0))
         warped-asteroid-areas (warped-shapes-of asteroid)
         shapes-by-distance (sort-by #(approximate-distance % transformed-bullet-bounds) warped-asteroid-areas)
         nearest-shape (first shapes-by-distance)
