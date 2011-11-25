@@ -6,7 +6,6 @@
 
 (defrecord xy [x y])
 
-
 (defn debug [anything]
   (println anything)
   anything)
@@ -19,7 +18,6 @@
   true)
 (defn on-right-border? [transformed-shape]
   true)
-
 
 (defn adjust-rotation [transform radians anchor]
   (.rotate transform radians (:x anchor) (:y anchor))

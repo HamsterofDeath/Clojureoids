@@ -78,4 +78,16 @@ public class UserInput implements Cloneable {
       throw new RuntimeException(e);
     }
   }
+
+  @Override
+  public String toString() {
+    return "UserInput{" +
+           "left=" + left +
+           ", right=" + right +
+           ", fire=" + fire +
+           ", accelerate=" + accelerate +
+           ", reverse=" + reverse +
+           ", teleport=" + teleport +
+           '}';
+  }
 }
