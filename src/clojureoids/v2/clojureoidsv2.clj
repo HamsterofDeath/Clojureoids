@@ -19,6 +19,8 @@
 (def backward-acc (/ forward-acc 2))
 (def max-forward-speed 9)
 (def max-backward-speed (/ max-forward-speed 2))
+(def weapon-heat-after-shot 15)
+(def bullet-time-to-live 60)
 (def left-border-line (TransformUtils/newRect 0 0 1 field-height))
 (def right-border-line (TransformUtils/newRect (- field-width 1) 0 field-width field-height))
 (def top-border-line (TransformUtils/newRect 0 0 field-width 1))
@@ -35,8 +37,7 @@
    :right? (.isRight user-input)
    :thrust? (.isAccelerate user-input)
    :attack? (.isFire user-input)
-   :break? (.isReverse user-input)
-   })
+   :break? (.isReverse user-input)})
 
 ;basic math stuff
 (defrecord xy [x y])
@@ -205,14 +206,14 @@
 (defn updated-rotation [{:keys [rotation spin]}]
   (+ rotation spin))
 
-(defn collision-result [{:keys [all-warped-shapes]} test-against]
+(defn compute-collision-result [{:keys [all-warped-shapes]} test-against]
   (for [my-shape all-warped-shapes
         other-entity test-against
         other-shape (:all-warped-shapes other-entity) :when (intersect? my-shape other-shape)]
     [my-shape other-shape]))
 
 (defn collision? [entity test-against]
-  (not-empty (collision-result entity test-against)))
+  (not-empty (compute-collision-result entity test-against)))
 
 (defn chain-assoc [org key function & keys-and-functions]
   (let [updated (assoc org key (function org))]
@@ -260,14 +261,26 @@
     :transformed-shape updated-shape
     :all-warped-shapes all-warped-shapes))
 
+(defn split-up-one-asteroid [bullet-shape asteroid-shape]
+  [])
+
+(defn split-up-asteroid [[bullet-shape asteroid-shape & rest]]
+  (flatten
+    (cons
+      (split-up-one-asteroid bullet-shape asteroid-shape)
+      (if (empty? rest)
+        []
+        (split-up-asteroid rest)))))
+
 (defn updated-asteroid [{:keys [asteroids bullets ship]} self]
-  (let [collision-detected? (collision? self bullets)]
+  (let [collision-result (compute-collision-result self bullets)
+        collision-detected? (not-empty collision-result)]
     (if collision-detected?
-      []
+      (split-up-asteroid collision-result)
       [(let [after-first-update
-             (assoc self
-               :position (warped-xy (updated-position self))
-               :rotation (updated-rotation self))]
+             (chain-assoc self
+               :position #(warped-xy (updated-position %))
+               :rotation updated-rotation)]
          (with-updated-transforms after-first-update))])))
 
 (defn updated-spin [{:keys [spin]} left? right?]
@@ -282,7 +295,6 @@
 
 (defn slowed-down-spin [{spin :spin}]
   (* 0.85 spin))
-
 
 (defn updated-movement [{:keys [movement rotation]} thrust? break?]
   (:pre [movement rotation thrust? break?])
@@ -323,20 +335,16 @@
   [])
 
 (defn updated-bullet [{:keys [asteroids]} self]
-  (let [touched-asteroids (collision-result self asteroids)]
-    (if (empty? touched-asteroids)
-      [(let [after-first-update
-             (assoc self
-               :position (warped-xy (updated-position self)))]
-         (with-updated-transforms after-first-update))]
-      (split-up-asteroids touched-asteroids))))
-
-;global update function
-(defn updated-world [{:keys [ship bullets asteroids] :as world} user-input]
-  {:asteroids (flatten (map #(updated-asteroid world %) asteroids))
-   :bullets (flatten (map #(updated-bullet world %) bullets))
-   :ship (updated-ship world ship user-input)
-   })
+  (if (= 0 (:time-to-live self))
+    []
+    (let [touched-asteroids (compute-collision-result self asteroids)]
+      (if (empty? touched-asteroids)
+        [(let [after-first-update
+               (chain-assoc self
+                 :position #(warped-xy (updated-position %))
+                 :time-to-live #(- (:time-to-live %) 1))]
+           (with-updated-transforms after-first-update))]
+        (split-up-asteroids touched-asteroids)))))
 
 ;object generation functions
 (defn gen-asteroid [size]
@@ -365,13 +373,13 @@
      :shape area
      :transformed-shape (updated-shape initial-transform area)}))
 
-(defn gen-bullet [ship]
-  (let [{rotation :rotation transform :transform} ship
-        {:keys [x y]} (:position ship)
-        area (gen-bullet)
+(defn gen-bullet [position rotation]
+  (let [{:keys [x y]} position
+        area (gen-bullet-area)
         initial-transform (AffineTransform/getTranslateInstance x y)
         direction (radians-to-xy rotation)]
     {:movement (with-length 5 direction)
+     :time-to-live bullet-time-to-live
      :spin 0.0
      :rotation 0.0
      :position {:x x :y y}
@@ -384,8 +392,32 @@
         asteroids (repeatedly asteroidcount gen-demo-asteroid)
         player-ship (gen-ship)]
     {:ship player-ship
+     :weapon {:cooldown 0}
      :asteroids asteroids
      :bullets []}))
+
+(defn new-bullets [{cooldown :cooldown} {:keys [position rotation]} user-input]
+  (let [player-alive? (and (not (nil? position)) (not (nil? rotation)))
+        fired? (.isFire user-input)
+        can-fire? (<= cooldown 0)]
+    (if
+      (and can-fire? fired? player-alive?)
+      [(gen-bullet position rotation)]
+      [])))
+
+(defn updated-weapon [{cooldown :cooldown} user-input]
+  (if (and (.isFire user-input) (<= cooldown 0))
+    {:cooldown weapon-heat-after-shot}
+    {:cooldown (- cooldown 1)}))
+
+;global update function
+(defn updated-world [{:keys [ship bullets asteroids weapon] :as world} user-input]
+  {:asteroids (flatten (map #(updated-asteroid world %) asteroids))
+   :bullets (concat (new-bullets weapon ship user-input) (flatten (map #(updated-bullet world %) bullets)))
+   :ship (updated-ship world ship user-input)
+   :weapon (updated-weapon weapon user-input)
+   })
+
 
 ;rendering
 (defn render [{:keys [asteroids bullets ship]} render-target]
@@ -396,7 +428,7 @@
 
 ;main
 (let [user-input-atom (atom [])
-      world-atom (atom (gen-world 25))
+      world-atom (atom (gen-world 45))
       uiaccess (MainFrame/createFrame field-width field-height)
       callback
       (reify AdvanceCallback
